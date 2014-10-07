@@ -7,19 +7,15 @@ import java.awt.event.WindowEvent;
 import java.awt.image.MemoryImageSource;
 import java.io.File;
 import java.io.FileInputStream;
-import java.nio.IntBuffer;
 import java.util.Arrays;
 
 import javax.swing.JFrame;
 
 import com.twilight.h264.decoder.AVFrame;
 import com.twilight.h264.decoder.AVPacket;
-import com.twilight.h264.decoder.DebugTool;
-import com.twilight.h264.decoder.H264Context;
-import com.twilight.h264.decoder.H264Data;
 import com.twilight.h264.decoder.H264Decoder;
-import com.twilight.h264.decoder.H264PredictionContext;
 import com.twilight.h264.decoder.MpegEncContext;
+import com.twilight.h264.util.FrameUtils;
 
 public class H264Player implements Runnable {
 	
@@ -32,38 +28,38 @@ public class H264Player implements Runnable {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 		new H264Player(args);
 	}
+
 	public H264Player(String[] args) {
 		if(args.length<1) {
 			System.out.println("Usage: java com.twilight.h264.decoder.H264Player <.h264 raw file>\n");
 			return;
-		} else {
+		}
 
-			JFrame frame = new JFrame("Player");
-			displayPanel = new PlayerFrame();
+		JFrame frame = new JFrame("Player");
+		displayPanel = new PlayerFrame();
 
-			frame.getContentPane().add(displayPanel, BorderLayout.CENTER);
+		frame.getContentPane().add(displayPanel, BorderLayout.CENTER);
 
-			// Finish setting up the frame, and show it.
-			frame.addWindowListener(new WindowAdapter() {
-				public void windowClosing(WindowEvent e) {
-					System.exit(0);
-				}
-			});
-			displayPanel.setVisible(true);
-			frame.pack();
-			frame.setVisible(true);
-			frame.setSize(new Dimension(645, 380));
-			
-			fileName = args[0];
+		// Finish setting up the frame, and show it.
+		frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				System.exit(0);
+			}
+		});
+		displayPanel.setVisible(true);
+		frame.pack();
+		frame.setVisible(true);
+		frame.setSize(new Dimension(645, 380));
+		
+		fileName = args[0];
 
-			new Thread(this).start();
-
-		} // if
+		new Thread(this).start();
 	}
 	
+	@Override
 	public void run() {
 		System.out.println("Playing "+ fileName);
 		playFile(fileName);		
@@ -80,8 +76,6 @@ public class H264Player implements Runnable {
 	    //uint8_t inbuf[INBUF_SIZE + H264Context.FF_INPUT_BUFFER_PADDING_SIZE];
 	    byte[] inbuf = new byte[INBUF_SIZE + MpegEncContext.FF_INPUT_BUFFER_PADDING_SIZE];
 	    int[] inbuf_int = new int[INBUF_SIZE + MpegEncContext.FF_INPUT_BUFFER_PADDING_SIZE];
-	    //char buf[1024];
-	    byte[] buf = new byte[1024];
 	    AVPacket avpkt = new AVPacket();
 
 	    avpkt.av_init_packet();
@@ -182,13 +176,15 @@ public class H264Player implements Runnable {
 			            if (got_picture[0]!=0) {
 			            	picture = c.priv_data.displayPicture;
 		
-							int bufferSize = picture.imageWidth * picture.imageHeight;
+			            	int imageWidth = picture.imageWidthWOEdge;
+			            	int imageHeight = picture.imageHeightWOEdge;
+							int bufferSize = imageWidth * imageHeight;
 							if (buffer == null || bufferSize != buffer.length) {
 								buffer = new int[bufferSize];
 							}
-							FrameUtils.YUV2RGB(picture, buffer);			
-							displayPanel.lastFrame = displayPanel.createImage(new MemoryImageSource(picture.imageWidth
-									, picture.imageHeight, buffer, 0, picture.imageWidth));
+							FrameUtils.YUV2RGB_WOEdge(picture, buffer);			
+							displayPanel.lastFrame = displayPanel.createImage(new MemoryImageSource(imageWidth
+									, imageHeight, buffer, 0, imageWidth));
 							displayPanel.invalidate();
 							displayPanel.updateUI();			            	
 			            }
