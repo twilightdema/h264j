@@ -1,5 +1,8 @@
 package com.twilight.h264.player;
 
+import static com.twilight.h264.decoder.H264Context.NAL_AUD;
+import static com.twilight.h264.decoder.H264Context.NAL_SLICE;
+
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.WindowAdapter;
@@ -23,6 +26,7 @@ public class H264Player implements Runnable {
 	private PlayerFrame displayPanel;
 	private String fileName;
 	private int[] buffer = null;
+	boolean foundFrameStart;
 
 	/**
 	 * @param args
@@ -64,7 +68,24 @@ public class H264Player implements Runnable {
 		System.out.println("Playing "+ fileName);
 		playFile(fileName);		
 	}
-	
+
+	private boolean isEndOfFrame(int code) {
+		int nal = code & 0x1F;
+
+		if (nal == NAL_AUD) {
+			return true;
+		}
+
+		if (nal == NAL_SLICE) {
+			if (foundFrameStart) {
+				return true;
+			}
+			foundFrameStart = true;
+		}
+
+		return false;
+	}
+
 	public boolean playFile(String filename) {
 	    H264Decoder codec;
 	    MpegEncContext c= null;
@@ -111,56 +132,75 @@ public class H264Player implements Runnable {
 	    try {
 		    /* the codec gives us the frame size, in samples */
 		    fin = new FileInputStream(f);
-	
+
 		    frame = 0;
 		    int dataPointer;
+		    int fileOffset = 0;
+		    foundFrameStart = false;
 
 		    // avpkt must contain exactly 1 NAL Unit in order for decoder to decode correctly.
 	    	// thus we must read until we get next NAL header before sending it to decoder.
 			// Find 1st NAL
-			int[] cacheRead = new int[3];
+			int[] cacheRead = new int[5];
 			cacheRead[0] = fin.read();
 			cacheRead[1] = fin.read();
 			cacheRead[2] = fin.read();
-			
+			cacheRead[3] = fin.read();
+
 			while(!(
 					cacheRead[0] == 0x00 &&
 					cacheRead[1] == 0x00 &&
-					cacheRead[2] == 0x01 
+					cacheRead[2] == 0x00 &&
+					cacheRead[3] == 0x01
 					)) {
 				 cacheRead[0] = cacheRead[1];
 				 cacheRead[1] = cacheRead[2];
-				 cacheRead[2] = fin.read();
+				 cacheRead[2] = cacheRead[3];
+				 cacheRead[3] = fin.read();
 			} // while
-	    	
+
 			boolean hasMoreNAL = true;
-			
+			cacheRead[4] = fin.read();
+
 			// 4 first bytes always indicate NAL header
-			inbuf_int[0]=inbuf_int[1]=inbuf_int[2]=0x00;
-			inbuf_int[3]=0x01;
-			
-			while(hasMoreNAL) {
-				dataPointer = 4;
+			while (hasMoreNAL) {
+				inbuf_int[0] = cacheRead[0];
+				inbuf_int[1] = cacheRead[1];
+				inbuf_int[2] = cacheRead[2];
+				inbuf_int[3] = cacheRead[3];
+				inbuf_int[4] = cacheRead[4];
+
+				dataPointer = 5;
 				// Find next NAL
 				cacheRead[0] = fin.read();
-				if(cacheRead[0]==-1) hasMoreNAL = false;
+				if (cacheRead[0]==-1) hasMoreNAL = false;
 				cacheRead[1] = fin.read();
-				if(cacheRead[1]==-1) hasMoreNAL = false;
+				if (cacheRead[1]==-1) hasMoreNAL = false;
 				cacheRead[2] = fin.read();
-				if(cacheRead[2]==-1) hasMoreNAL = false;
+				if (cacheRead[2]==-1) hasMoreNAL = false;
+				cacheRead[3] = fin.read();
+				if (cacheRead[3]==-1) hasMoreNAL = false;
+				cacheRead[4] = fin.read();
+				if (cacheRead[4]==-1) hasMoreNAL = false;
 				while(!(
 						cacheRead[0] == 0x00 &&
 						cacheRead[1] == 0x00 &&
-						cacheRead[2] == 0x01 
+						cacheRead[2] == 0x00 &&
+						cacheRead[3] == 0x01 &&
+						isEndOfFrame(cacheRead[4]) 
 						) && hasMoreNAL) {
 					 inbuf_int[dataPointer++] = cacheRead[0];
 					 cacheRead[0] = cacheRead[1];
 					 cacheRead[1] = cacheRead[2];
-					 cacheRead[2] = fin.read();
-					if(cacheRead[2]==-1) hasMoreNAL = false;
+					 cacheRead[2] = cacheRead[3];
+					 cacheRead[3] = cacheRead[4];
+					 cacheRead[4] = fin.read();
+					if (cacheRead[4]==-1) hasMoreNAL = false;
 				} // while
 
 				avpkt.size = dataPointer;
+				//System.out.println(String.format("Offset 0x%X, packet size 0x%X, nal=0x%X", fileOffset, dataPointer, inbuf_int[4] & 0x1F));
+				fileOffset += dataPointer - 1;
 
 		        avpkt.data_base = inbuf_int;
 		        avpkt.data_offset = 0;
@@ -175,7 +215,7 @@ public class H264Player implements Runnable {
 			            } // if
 			            if (got_picture[0]!=0) {
 			            	picture = c.priv_data.displayPicture;
-		
+
 			            	int imageWidth = picture.imageWidthWOEdge;
 			            	int imageHeight = picture.imageHeightWOEdge;
 							int bufferSize = imageWidth * imageHeight;
@@ -195,10 +235,10 @@ public class H264Player implements Runnable {
 		        	// Any exception, we should try to proceed reading next packet!
 		        	ie.printStackTrace();
 		        } // try
-				
+
 			} // while
-					
-	
+
+
 	    } catch(Exception e) {
 	    	e.printStackTrace();
 	    } finally {
@@ -209,9 +249,7 @@ public class H264Player implements Runnable {
 	    c = null;
 	    picture = null;
 	    System.out.println("Stop playing video.");
-	    
+
 	    return true;
 	}
-	
-
 }
