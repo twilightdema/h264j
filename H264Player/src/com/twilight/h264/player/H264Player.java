@@ -1,6 +1,7 @@
 package com.twilight.h264.player;
 
 import static com.twilight.h264.decoder.H264Context.NAL_AUD;
+import static com.twilight.h264.decoder.H264Context.NAL_IDR_SLICE;
 import static com.twilight.h264.decoder.H264Context.NAL_SLICE;
 
 import java.awt.BorderLayout;
@@ -73,17 +74,21 @@ public class H264Player implements Runnable {
 		int nal = code & 0x1F;
 
 		if (nal == NAL_AUD) {
+			foundFrameStart = false;
 			return true;
 		}
 
-		if (nal == NAL_SLICE) {
+		boolean foundFrame = foundFrameStart;
+		if (nal == NAL_SLICE || nal == NAL_IDR_SLICE) {
 			if (foundFrameStart) {
 				return true;
 			}
 			foundFrameStart = true;
+		} else {
+			foundFrameStart = false;
 		}
 
-		return false;
+		return foundFrame;
 	}
 
 	public boolean playFile(String filename) {
