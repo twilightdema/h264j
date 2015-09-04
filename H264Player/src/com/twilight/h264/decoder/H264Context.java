@@ -3469,7 +3469,7 @@ public class H264Context {
 	                val= -((val + 1)>>1);
 	            last_qscale_diff = val;
 	            s.qscale += val;
-	            if(((int)s.qscale) > 51){
+	            if((/*(unsigned)*/s.qscale) > 51 || s.qscale < 0){
 	                if(s.qscale<0) s.qscale+= 52;
 	                else            s.qscale-= 52;
 	            }
