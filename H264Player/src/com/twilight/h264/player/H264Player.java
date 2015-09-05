@@ -22,12 +22,12 @@ import com.twilight.h264.decoder.MpegEncContext;
 import com.twilight.h264.util.FrameUtils;
 
 public class H264Player implements Runnable {
-	
 	public static final int INBUF_SIZE = 65535;
 	private PlayerFrame displayPanel;
 	private String fileName;
 	private int[] buffer = null;
 	boolean foundFrameStart;
+	static final boolean debug = false;
 
 	/**
 	 * @param args
@@ -204,8 +204,10 @@ public class H264Player implements Runnable {
 				} // while
 
 				avpkt.size = dataPointer;
-				//System.out.println(String.format("Offset 0x%X, packet size 0x%X, nal=0x%X", fileOffset, dataPointer, inbuf_int[4] & 0x1F));
-				fileOffset += dataPointer - 1;
+				if (debug) {
+					System.out.println(String.format("Offset 0x%X, packet size 0x%X, nal=0x%X", fileOffset, dataPointer, inbuf_int[4] & 0x1F));
+				}
+				fileOffset += dataPointer;
 
 		        avpkt.data_base = inbuf_int;
 		        avpkt.data_offset = 0;
