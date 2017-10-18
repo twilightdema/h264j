@@ -7,7 +7,7 @@ Everything is re-implemented in pure JAVA language.
 
 java com.twilight.h264.player.H264Player _<H264 Raw File>_
 
-You can use sample H264 Raw files in /sample\_clips directory.
+You can use sample H264 Raw files in /h264j/sample\_clips directory.
 
 
 ---
