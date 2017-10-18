@@ -3,12 +3,27 @@
 Everything is re-implemented in pure JAVA language.
 **h264j** can decode **Baseline / Main / Extend / High profile**.
 
-**To run the project**, use:
+---
 
-java com.twilight.h264.player.H264Player _<H264 Raw File>_
+**To build the project**,
+```
+cd h264j
+mvn package
+```
+Your built JAR file should be in target directory
+
+---
+
+**To run the project**,
+
+Use JAVA to run com.twilight.h264.player.H264Player with parameter H264 Raw File
 
 You can use sample H264 Raw files in /h264j/sample\_clips directory.
 
+>Example
+```
+java -cp h264j-1.0-SNAPSHOT.jar com.twilight.h264.player.H264Player ../../h264j/sample_clips/admiral.264
+```
 
 ---
 
@@ -18,6 +33,8 @@ Package com.twilight.h264.util provides utility classes for JAVA system (and som
 
 To use decoder, please see example in class com.twilight.h264.player.H264Player.
 
+
 Enjoy :)
+
 
 Chulayuth A.
